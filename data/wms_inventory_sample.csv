@@ -1,4 +1,9 @@
-sku,warehouse,on_hand_units,average_daily_demand
-SKU-1,WH-A,120,12
-SKU-2,WH-A,40,10
-SKU-3,WH-B,0,5
+sku,warehouse,on_hand_units,average_daily_demand,reorder_point_units,unit_cost,trailing_90d_cogs,average_inventory_value
+SKU-1,WH-A,120,12,50,22,18000,14000
+SKU-2,WH-A,40,10,45,18,12000,9000
+SKU-3,WH-B,0,5,20,14,6000,4500
+SKU-4,WH-B,3,6,25,21,8000,3500
+SKU-5,WH-C,80,20,60,30,24000,21000
+SKU-6,WH-C,12,2,10,25,3000,4000
+SKU-7,WH-D,25,15,70,16,20000,6000
+SKU-8,WH-D,95,8,30,28,14000,12000

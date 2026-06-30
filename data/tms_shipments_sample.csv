@@ -2,3 +2,9 @@ shipment_id,order_id,carrier,ship_date,delivery_date,freight_cost,on_time
 S001,1001,CarrierA,2026-01-03,2026-01-05,75,true
 S002,1002,CarrierB,2026-01-04,2026-01-08,120,false
 S003,1003,CarrierA,2026-01-05,2026-01-07,90,true
+S004,1005,CarrierC,2026-01-09,2026-01-12,60,true
+S005,1006,CarrierB,2026-01-11,2026-01-14,180,true
+S006,1007,CarrierA,2026-01-13,2026-01-20,55,false
+S007,1008,CarrierC,2026-01-16,2026-01-18,85,true
+S008,1009,CarrierB,2026-01-16,2026-01-22,200,false
+S009,1010,CarrierC,2026-01-19,2026-01-23,95,true
