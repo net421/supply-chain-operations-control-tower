@@ -1,0 +1,4 @@
+sku,warehouse,on_hand_units,average_daily_demand
+SKU-1,WH-A,120,12
+SKU-2,WH-A,40,10
+SKU-3,WH-B,0,5
