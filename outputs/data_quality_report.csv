@@ -1,0 +1,10 @@
+check,status,detail
+order_line_key_unique,PASS,rows=5928
+shipment_order_unique,PASS,orders=2400
+units_non_negative,PASS,ordered and shipped units >= 0
+shipped_not_above_ordered,PASS,line-level shipped <= ordered
+unit_fill_rate_range,PASS,value=0.9679
+otif_rate_range,PASS,value=0.6233
+otif_not_above_components,PASS,OTIF <= in-full and on-time
+backorder_complements_fill,PASS,fill + backorder = 1
+carrier_output_non_empty,PASS,carriers=4

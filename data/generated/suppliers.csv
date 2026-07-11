@@ -1,0 +1,21 @@
+supplier_id,supplier_name,base_lead_time_days,supplier_risk_tier
+SUP001,Supplier 01,17,Low
+SUP002,Supplier 02,15,Low
+SUP003,Supplier 03,9,High
+SUP004,Supplier 04,13,Low
+SUP005,Supplier 05,7,Medium
+SUP006,Supplier 06,20,Low
+SUP007,Supplier 07,21,Low
+SUP008,Supplier 08,20,Low
+SUP009,Supplier 09,6,Low
+SUP010,Supplier 10,6,Medium
+SUP011,Supplier 11,21,Low
+SUP012,Supplier 12,10,Low
+SUP013,Supplier 13,19,Medium
+SUP014,Supplier 14,14,High
+SUP015,Supplier 15,19,Low
+SUP016,Supplier 16,16,Low
+SUP017,Supplier 17,7,Low
+SUP018,Supplier 18,6,Low
+SUP019,Supplier 19,17,High
+SUP020,Supplier 20,20,Low
