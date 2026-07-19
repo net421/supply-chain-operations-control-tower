@@ -1,0 +1,9 @@
+metric,python_value,sql_value,absolute_difference,tolerance,status
+total_orders,2400,2400,0,1e-09,PASS
+unit_fill_rate,0.967923148267,0.967923148267,0,1e-09,PASS
+complete_order_rate,0.8575,0.8575,0,1e-09,PASS
+on_time_delivery_rate,0.708333333333,0.708333333333,0,1e-09,PASS
+otif_rate,0.60625,0.60625,0,1e-09,PASS
+backorder_rate,0.032076851733,0.032076851733,0,1e-09,PASS
+average_lead_time_days,4.87333333333,4.87333333333,0,1e-09,PASS
+total_cost_to_serve,972618.91,972618.91,0,1e-09,PASS

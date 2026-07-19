@@ -1,12 +1,12 @@
 metric,value
 unit_fill_rate,0.9679231482668396
 complete_order_rate,0.8575
-on_time_delivery_rate,0.7275
-otif_rate,0.6233333333333333
+on_time_delivery_rate,0.7083333333333334
+otif_rate,0.60625
 backorder_rate,0.032076851733160404
-average_lead_time_days,4.847083333333333
+average_lead_time_days,4.873333333333333
 weighted_forecast_accuracy,0.8290290229906725
 stockout_location_sku_rate,0.0699074074074074
 warehouse_productivity_units_per_hour,25.764205286714976
 average_freight_cost_per_kg,0.7655413529383346
-total_cost_to_serve,971050.65
+total_cost_to_serve,972618.9099999999

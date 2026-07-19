@@ -14,6 +14,20 @@ def safe_divide(numerator: float, denominator: float) -> float:
     return float(numerator / denominator) if denominator else 0.0
 
 
+def weighted_forecast_accuracy(forecasts: pd.DataFrame) -> float:
+    """Return bounded weighted accuracy with an explicit zero-actual policy.
+
+    Accuracy is 1.0 when forecast and actual totals are both zero, 0.0 when
+    actual demand is zero but forecast error exists, and otherwise the bounded
+    weighted absolute-error formula.
+    """
+    abs_error = (forecasts["forecast_units"] - forecasts["actual_units"]).abs().sum()
+    actual = forecasts["actual_units"].sum()
+    if actual == 0:
+        return 1.0 if abs_error == 0 else 0.0
+    return max(0.0, 1.0 - safe_divide(abs_error, actual))
+
+
 def load_data() -> dict[str, pd.DataFrame]:
     date_columns = {
         "orders": ["order_date", "promised_date"],
@@ -67,8 +81,6 @@ def calculate_order_service(orders: pd.DataFrame, shipments: pd.DataFrame) -> pd
 def calculate_summary(service: pd.DataFrame, forecasts: pd.DataFrame, inventory: pd.DataFrame, activity: pd.DataFrame) -> pd.DataFrame:
     total_ordered = service["units_ordered"].sum()
     total_shipped = service["units_shipped"].sum()
-    abs_error = (forecasts["forecast_units"] - forecasts["actual_units"]).abs().sum()
-    actual = forecasts["actual_units"].sum()
     stockouts = ((inventory["on_hand_units"] <= 0) & (inventory["average_daily_demand"] > 0)).mean()
     warehouse_productivity = safe_divide(activity["units_processed"].sum(), activity["labor_hours"].sum())
     metrics = [
@@ -78,7 +90,7 @@ def calculate_summary(service: pd.DataFrame, forecasts: pd.DataFrame, inventory:
         ("otif_rate", float(service["otif"].mean())),
         ("backorder_rate", safe_divide(service["backorder_units"].sum(), total_ordered)),
         ("average_lead_time_days", float(service["lead_time_days"].mean())),
-        ("weighted_forecast_accuracy", max(0.0, 1.0 - safe_divide(abs_error, actual))),
+        ("weighted_forecast_accuracy", weighted_forecast_accuracy(forecasts)),
         ("stockout_location_sku_rate", float(stockouts)),
         ("warehouse_productivity_units_per_hour", warehouse_productivity),
         ("average_freight_cost_per_kg", float(service["freight_cost_per_kg"].dropna().mean())),

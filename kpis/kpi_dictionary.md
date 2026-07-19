@@ -10,7 +10,7 @@
 | Lead Time | order | delivery date - order date | Customer responsiveness | Non-negative days |
 | Days of Inventory | SKU/location/snapshot | on-hand units / average daily demand | Stock coverage | Null when demand is zero |
 | Stockout Rate | SKU/location/snapshot | demanded combinations with zero on hand / demanded combinations | Availability risk | Filter to positive demand |
-| Forecast Accuracy | SKU/location/month | `1 - sum(abs(forecast-actual))/sum(actual)` | Weighted planning accuracy | Clamp at zero for reporting |
+| Forecast Accuracy | SKU/location/month | `1 - sum(abs(forecast-actual))/sum(actual)` when actual total > 0 | Weighted planning accuracy | Clamp at zero; return 1 only when forecast and actual are both zero, otherwise 0 when actual is zero |
 | Warehouse Productivity | warehouse/period | units processed / labor hours | Labor efficiency | Labor hours must be positive |
 | Freight Cost per kg | shipment | freight cost / shipped weight | Transport cost efficiency | Exclude zero-weight shipments |
 | Cost-to-Serve | order/customer | freight + handling + exception cost | Service profitability pressure | Reconcile to shipment costs |

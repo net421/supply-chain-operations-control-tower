@@ -1,7 +1,9 @@
--- DuckDB-compatible advanced supply chain KPI examples.
--- Expected grains are documented in each section.
+-- DuckDB KPI marts used by the executable reconciliation pipeline.
+-- Source views are registered from data/generated/*.csv by
+-- validation/reconcile_sql_python.py.
 
--- 1) Order service detail: one row per order.
+-- One row per order. This portfolio model intentionally assumes one shipment
+-- per order; split shipments would require a fulfillment bridge.
 create or replace view mart_order_service as
 with order_rollup as (
     select
@@ -38,7 +40,8 @@ select
     freight_cost / nullif(shipment_weight_kg, 0) as freight_cost_per_kg
 from joined;
 
--- 2) Governed headline KPIs: one row.
+-- One governed row of headline service and cost KPIs.
+create or replace view mart_kpi_summary as
 select
     count(*) as total_orders,
     sum(units_shipped) * 1.0 / nullif(sum(units_ordered), 0) as unit_fill_rate,
@@ -50,7 +53,8 @@ select
     sum(cost_to_serve) as total_cost_to_serve
 from mart_order_service;
 
--- 3) Carrier scorecard with rankings and percentiles: one row per carrier.
+-- One row per carrier with transparent service and cost rankings.
+create or replace view mart_carrier_scorecard as
 with carrier_metrics as (
     select
         carrier,
@@ -68,40 +72,62 @@ select
     *,
     dense_rank() over (order by otif_rate desc) as service_rank,
     dense_rank() over (order by average_freight_cost_per_kg asc) as cost_rank
-from carrier_metrics
-order by service_rank, cost_rank;
+from carrier_metrics;
 
--- 4) Rolling 30-day service trend: one row per calendar day with orders.
+-- One row per order date. The rolling rates accumulate their natural
+-- numerators and denominators: order counts for OTD/OTIF and units for fill.
+-- Windows cover the preceding 29 calendar days plus the current day.
+create or replace view mart_daily_service as
 with daily as (
     select
         order_date,
         count(*) as orders,
-        avg(otif::integer) as daily_otif,
+        sum(coalesce(on_time, false)::integer) as on_time_orders,
+        sum(coalesce(otif, false)::integer) as otif_orders,
+        sum(units_ordered) as units_ordered,
+        sum(units_shipped) as units_shipped,
+        sum(coalesce(on_time, false)::integer) * 1.0
+            / nullif(count(*), 0) as daily_otd_rate,
+        sum(coalesce(otif, false)::integer) * 1.0
+            / nullif(count(*), 0) as daily_otif_rate,
         sum(units_shipped) * 1.0 / nullif(sum(units_ordered), 0) as daily_fill_rate
     from mart_order_service
     group by order_date
+), rolling as (
+    select
+        *,
+        sum(orders) over (
+            order by order_date
+            range between interval 29 days preceding and current row
+        ) as rolling_30d_orders,
+        sum(on_time_orders) over (
+            order by order_date
+            range between interval 29 days preceding and current row
+        ) as rolling_30d_on_time_orders,
+        sum(otif_orders) over (
+            order by order_date
+            range between interval 29 days preceding and current row
+        ) as rolling_30d_otif_orders,
+        sum(units_ordered) over (
+            order by order_date
+            range between interval 29 days preceding and current row
+        ) as rolling_30d_units_ordered,
+        sum(units_shipped) over (
+            order by order_date
+            range between interval 29 days preceding and current row
+        ) as rolling_30d_units_shipped
+    from daily
 )
 select
     *,
-    sum(orders) over (order by order_date rows between 29 preceding and current row) as rolling_30d_orders,
-    avg(daily_otif) over (order by order_date rows between 29 preceding and current row) as rolling_30d_otif,
-    avg(daily_fill_rate) over (order by order_date rows between 29 preceding and current row) as rolling_30d_fill_rate,
-    daily_otif - lag(daily_otif) over (order by order_date) as day_over_day_otif_change
-from daily
-order by order_date;
-
--- 5) Reconciliation checks: every query should return zero rows or zero variance.
-select
-    sum(units_ordered) as source_units_ordered,
-    sum(units_shipped) as source_units_shipped
-from erp_order_lines;
-
-select
-    sum(units_ordered) as mart_units_ordered,
-    sum(units_shipped) as mart_units_shipped
-from mart_order_service;
-
-select order_id, count(*) as row_count
-from mart_order_service
-group by order_id
-having count(*) <> 1;
+    rolling_30d_on_time_orders * 1.0
+        / nullif(rolling_30d_orders, 0) as rolling_30d_otd_rate,
+    rolling_30d_otif_orders * 1.0
+        / nullif(rolling_30d_orders, 0) as rolling_30d_otif_rate,
+    rolling_30d_units_shipped * 1.0
+        / nullif(rolling_30d_units_ordered, 0) as rolling_30d_fill_rate,
+    daily_otd_rate - lag(daily_otd_rate) over (order by order_date)
+        as day_over_day_otd_change,
+    daily_otif_rate - lag(daily_otif_rate) over (order by order_date)
+        as day_over_day_otif_change
+from rolling;

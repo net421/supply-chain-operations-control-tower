@@ -1,71 +1,112 @@
-# Control Tower Validation Artifact
+# Control Tower Validation Contract
 
-This artifact turns synthetic ERP, TMS, and WMS samples into a reviewable supply chain control tower. It is a lab pattern for portfolio evidence, not a production deployment claim.
+This document describes what the current repository actually executes. The
+project is a deterministic local simulation, not a production control tower.
 
-## Business Scenario
-
-Operations leaders need a daily view of which orders are late, partially filled, backordered, at stockout risk, or creating freight-cost pressure. The artifact keeps KPI definitions, data lineage, exception logic, and validation checks visible.
-
-## Lineage
+## Executed lineage
 
 ```mermaid
-flowchart LR
-    erp["ERP orders<br/>promise, ordered units, shipped units"]
-    tms["TMS shipments<br/>carrier, ship/delivery dates, freight"]
-    wms["WMS inventory<br/>on hand, demand, reorder point, cost"]
-    mart["control tower mart<br/>OTIF, fill, service, lead time, freight, risk"]
-    queue["exception queue<br/>high, medium, monitor"]
-    dashboard["Tableau control tower spec"]
-
-    erp --> mart
-    tms --> mart
-    wms --> mart
-    mart --> queue
-    mart --> dashboard
+flowchart TD
+    G["Deterministic source generator"] --> P["pandas outputs"]
+    G --> D["DuckDB source views"]
+    D --> M["SQL KPI marts"]
+    P --> R["Eight-metric reconciliation"]
+    M --> R
+    R --> V["37 validation checks"]
+    V --> T["pytest and CI"]
 ```
 
-## Validation Contract
+`run_pipeline.py` executes this lineage in dependency order and stops on the
+first failure. GitHub Actions runs the same command with `--with-tests`.
 
-The SQL validation queries and Python validator check:
+## Grains and keys
 
-- ERP order grain is unique by `order_id`.
-- TMS shipments reference valid ERP orders.
-- Any order with shipped units has a shipment record.
-- Units shipped are non-negative and do not exceed units ordered.
-- Promised dates do not precede order dates.
-- Delivery dates do not precede ship dates.
-- TMS `on_time` flag agrees with delivery date versus promised date.
-- WMS inventory values are non-negative and average inventory value is positive.
+| Dataset or mart | Grain | Enforced key or rule |
+|---|---|---|
+| `erp_order_lines` | one row per order line | unique `order_line_id` |
+| `tms_shipments` | one shipment per order | unique `order_id` in this simplified model |
+| `wms_inventory_snapshots` | one snapshot/SKU/warehouse | composite uniqueness |
+| `demand_forecasts` | one month/SKU/warehouse | composite uniqueness |
+| `warehouse_activity` | one month/warehouse | composite uniqueness |
+| `mart_order_service` | one row per order | duplicate orders fail reconciliation |
+| `mart_kpi_summary` | one row for the modeled portfolio | eight metrics reconcile to pandas |
 
-## Exception Logic
+The ERP source is deliberately line-grain. Any claim that it is unique by
+`order_id` is incorrect; aggregation happens before service classification.
 
-| Priority | Rule | Operations Meaning |
-| --- | --- | --- |
-| High | Zero units shipped, or partial fill overlaps stockout/reorder risk. | Immediate service recovery or allocation review. |
-| Medium | Partial fill or late delivery. | Triage with customer service, warehouse, or carrier. |
-| Monitor | Inventory below reorder point without current service failure. | Watch replenishment before it becomes a service issue. |
-| Normal | No active exception. | Standard dashboard monitoring. |
+## Validation layers
 
-## Local Review
+| Layer | Examples | Evidence |
+|---|---|---|
+| Referential integrity | shipment orders, customers, products and suppliers exist | `outputs/data_quality_report.csv` |
+| Temporal logic | promise >= order, ERP/TMS promises agree, delivery >= ship, source on-time flag agrees with dates | `outputs/data_quality_report.csv` |
+| Numeric contracts | non-negative units, inventory and forecasts; positive labor hours | `outputs/data_quality_report.csv` |
+| Output grains | unique order detail and unique summary metrics | `outputs/data_quality_report.csv` |
+| KPI invariants | service, forecast and stockout rates stay in `[0, 1]`; OTIF <= components; fill + backorder = 1 | `outputs/data_quality_report.csv` |
+| Independent calculation | normalized pandas and DuckDB values agree within `1e-9` | `outputs/sql_python_reconciliation.csv` |
+| Regression behavior | multi-line aggregation, natural rolling weights, zero-demand forecast policy, stable reconciliation bytes and mismatch detection | `tests/` |
 
-Run:
+Validation failures raise a non-zero process exit; they are not converted into
+warnings or silently discarded.
+
+## Aggregation and zero-demand policies
+
+Rolling 30-day OTD and OTIF accumulate qualifying orders divided by total orders.
+Rolling fill rate accumulates shipped units divided by ordered units. The mart
+does not average daily percentages because that would give a low-volume day the
+same influence as a high-volume day.
+
+Weighted forecast accuracy follows an explicit zero-demand rule:
+
+- forecast and actual both total zero: `1.0`;
+- actual totals zero but any absolute forecast error exists: `0.0`;
+- otherwise: `max(0, 1 - sum(abs(forecast - actual)) / sum(actual))`.
+
+Before the reconciliation CSV is written, rates are normalized to 12 decimal
+places, order counts to whole values and modeled money to two decimals. The
+comparison still uses the documented tolerance, and a regression test writes the
+report twice and asserts byte-identical output.
+
+## Corrected defect: impossible delivery chronology
+
+While strengthening the temporal contract, the generated data failed
+`delivery_not_before_ship`. The generator independently sampled ship offsets and
+delivery offsets from the promised date. For short service promises, this could
+produce a delivery date earlier than the ship date.
+
+The repair in `data/generate_synthetic_data.py` now:
+
+1. calculates the candidate delivery date;
+2. clamps delivery to the later of candidate delivery and ship date;
+3. recalculates effective delay from the corrected delivery date;
+4. derives exception cost and the on-time flag from that chronology;
+5. enforces the rule in every pipeline and CI run.
+
+This is a real repository defect found and repaired during validation. It is not
+presented as a production incident or client outage.
+
+## Local verification
 
 ```bash
-python python/calculate_kpis.py
+python run_pipeline.py --with-tests
 ```
 
-Expected behavior:
+Expected outputs include:
 
-- Load the synthetic ERP, TMS, and WMS samples.
-- Run input validation checks.
-- Build order-level control tower rows.
-- Print a summary, carrier scorecard, validation check count, and exception queue.
+- eight `PASS` rows in `outputs/sql_python_reconciliation.csv`;
+- 37 `PASS` rows in `outputs/data_quality_report.csv`;
+- all pytest cases passing;
+- a final `Control tower pipeline completed successfully.` message.
 
-## Assumptions And Limits
+## Modeling limits
 
-- The samples are synthetic and intentionally small enough for human review.
-- An order is OTIF only when it is both on time and in full.
-- Service level is less strict than OTIF and only checks promised-date performance.
-- Inventory turnover uses synthetic trailing 90-day COGS and average inventory value.
-- Freight cost is attributed at the shipment/order level, not allocated to SKU lines.
-- Forecast accuracy and warehouse productivity are named in the broader KPI dictionary but not modeled in this specific artifact because the sample data does not include forecasts or labor hours.
+- Data is synthetic and covers a single deterministic scenario.
+- One shipment per order avoids split-shipment allocation complexity.
+- OTD and OTIF use all modeled orders because every modeled order has a shipment
+  and delivery; a production denominator would need explicit cancellation and
+  open-order policy.
+- Supplier risk may attribute an order-level backorder to multiple suppliers when
+  an order contains products from multiple suppliers.
+- The SQL and pandas paths share the same generated sources, so reconciliation
+  detects calculation drift but not source-system truth.
+- The Tableau document is a specification, not an executed workbook.

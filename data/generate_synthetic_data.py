@@ -107,10 +107,24 @@ def generate() -> None:
     shipments["carrier"] = rng.choice(carriers, len(shipments), p=[0.30, 0.28, 0.24, 0.18])
     shipments["ship_date"] = pd.to_datetime(order_headers["order_date"]) + pd.to_timedelta(rng.integers(0, 4, len(shipments)), unit="D")
     delay = rng.choice([-1, 0, 0, 0, 1, 2, 3, 5], len(shipments), p=[0.04, 0.48, 0.12, 0.08, 0.12, 0.08, 0.05, 0.03])
-    shipments["delivery_date"] = pd.to_datetime(shipments["promised_date"]) + pd.to_timedelta(delay, unit="D")
+    candidate_delivery = pd.to_datetime(shipments["promised_date"]) + pd.to_timedelta(delay, unit="D")
+    # A delivery cannot occur before the shipment leaves the warehouse. The
+    # original simulation could violate this when a short service promise,
+    # late ship date and negative delivery delay occurred together.
+    shipments["delivery_date"] = pd.concat(
+        [candidate_delivery, shipments["ship_date"]], axis=1
+    ).max(axis=1)
     shipments["freight_cost"] = np.round(24 + shipments["shipment_weight_kg"] * rng.uniform(0.35, 0.85, len(shipments)) + rng.normal(0, 8, len(shipments)), 2).clip(8)
     shipments["handling_cost"] = np.round(rng.uniform(4, 18, len(shipments)), 2)
-    shipments["exception_cost"] = np.where(delay > 0, np.round(rng.uniform(5, 60, len(shipments)), 2), 0.0)
+    effective_delay = (
+        pd.to_datetime(shipments["delivery_date"])
+        - pd.to_datetime(shipments["promised_date"])
+    ).dt.days
+    shipments["exception_cost"] = np.where(
+        effective_delay > 0,
+        np.round(rng.uniform(5, 60, len(shipments)), 2),
+        0.0,
+    )
     shipments["on_time"] = pd.to_datetime(shipments["delivery_date"]) <= pd.to_datetime(shipments["promised_date"])
     shipments = shipments[["shipment_id", "order_id", "carrier", "warehouse", "ship_date", "delivery_date", "promised_date", "shipment_weight_kg", "freight_cost", "handling_cost", "exception_cost", "on_time"]]
 
