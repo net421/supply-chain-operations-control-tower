@@ -31,7 +31,8 @@ on_time_delivery_rate_range,PASS,value=0.7083
 otif_rate_range,PASS,value=0.6062
 backorder_rate_range,PASS,value=0.0321
 forecast_accuracy_range,PASS,value=0.8290
-stockout_rate_range,PASS,value=0.0699
+stockout_rate_range,PASS,value=0.0950
+stockout_rate_matches_demanded_inventory,PASS,stockouts=302; demanded_combinations=3179
 otif_not_above_components,PASS,OTIF <= in-full and on-time
 backorder_complements_fill,PASS,fill + backorder = 1 under the documented model
 carrier_output_non_empty,PASS,carriers=4

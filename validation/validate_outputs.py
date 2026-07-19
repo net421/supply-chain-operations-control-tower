@@ -38,6 +38,12 @@ def run_validation() -> pd.DataFrame:
     carrier = pd.read_csv(OUTPUTS / "carrier_scorecard.csv")
     reconciliation = pd.read_csv(OUTPUTS / "sql_python_reconciliation.csv")
     metric = summary.set_index("metric")["value"]
+    demanded_inventory = inventory[inventory["average_daily_demand"] > 0]
+    stockout_count = int((demanded_inventory["on_hand_units"] <= 0).sum())
+    demanded_inventory_count = len(demanded_inventory)
+    expected_stockout_rate = (
+        stockout_count / demanded_inventory_count if demanded_inventory_count else 0.0
+    )
 
     expected_on_time = shipments["delivery_date"] <= shipments["promised_date"]
     source_on_time = shipments["on_time"].astype(str).str.lower().eq("true")
@@ -192,6 +198,13 @@ def run_validation() -> pd.DataFrame:
             "stockout_rate_range",
             0 <= metric["stockout_location_sku_rate"] <= 1,
             f"value={metric['stockout_location_sku_rate']:.4f}",
+        ),
+        check(
+            "stockout_rate_matches_demanded_inventory",
+            abs(metric["stockout_location_sku_rate"] - expected_stockout_rate)
+            < 1e-9,
+            f"stockouts={stockout_count}; "
+            f"demanded_combinations={demanded_inventory_count}",
         ),
         check(
             "otif_not_above_components",

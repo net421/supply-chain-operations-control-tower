@@ -15,10 +15,12 @@ experience, real users or confidential business data.
 
 | Question a reviewer may ask | Direct evidence |
 |---|---|
+| Can the analysis answer a manager's question? | Start with the [manager case study](docs/manager_case_study.md), tracked in [Issue #5](https://github.com/net421/supply-chain-operations-control-tower/issues/5): request, evidence, findings, bounded decisions and limitations. |
+| Can I trace a change from problem to checked output? | The case study maps [Issue #3](https://github.com/net421/supply-chain-operations-control-tower/issues/3) to [PR #4](https://github.com/net421/supply-chain-operations-control-tower/pull/4), 11 current tests, eight reconciled metrics and 38 data contracts. |
 | Can the project run from a clean checkout? | [`run_pipeline.py`](run_pipeline.py) executes generation, KPIs, SQL reconciliation, validation and optional tests. |
 | Is the SQL executed or only displayed? | [`supply_chain_kpis.sql`](sql/supply_chain_kpis.sql) creates DuckDB marts that run in CI. |
 | Do two implementations agree? | [`sql_python_reconciliation.csv`](outputs/sql_python_reconciliation.csv) compares eight SQL and pandas metrics. |
-| Are source and output assumptions checked? | [`data_quality_report.csv`](outputs/data_quality_report.csv) records 37 source, grain, date, KPI and output checks. |
+| Are source and output assumptions checked? | [`data_quality_report.csv`](outputs/data_quality_report.csv) records 38 source, grain, date, KPI and output checks. |
 | Are KPI definitions governed? | [`kpi_dictionary.md`](kpis/kpi_dictionary.md) separates fill rate, complete-order rate, OTD and OTIF. |
 | Can the analysis support an operating review? | [`executive_summary.md`](stakeholder_summary/executive_summary.md) turns generated outputs into bounded observations and questions. |
 | Are limitations explicit? | [Validation contract](docs/control_tower_validation.md) documents assumptions, a corrected generator defect and unsupported claims. |
@@ -35,11 +37,18 @@ The deterministic seed currently produces 2,400 orders and 5,928 order lines:
 | OTIF | 60.62% |
 | Backorder rate | 3.21% |
 | Weighted forecast accuracy | 82.90% |
-| Stockout location-SKU rate | 6.99% |
+| Stockout location-SKU rate | 9.50% |
 | Total modeled cost-to-serve | 972,618.91 |
+
+The stockout denominator excludes zero-demand snapshots: 302 of 3,179
+positive-demand location-SKU combinations have zero on-hand inventory.
 
 The gap between fill rate and OTIF is intentional: units can be mostly fulfilled
 while whole orders still arrive late or incomplete.
+
+The [manager case study](docs/manager_case_study.md) decomposes the 2,400 orders
+into a four-part service review queue and shows which decisions the evidence can
+and cannot support.
 
 ## Architecture
 

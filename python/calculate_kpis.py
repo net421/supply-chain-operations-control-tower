@@ -81,7 +81,11 @@ def calculate_order_service(orders: pd.DataFrame, shipments: pd.DataFrame) -> pd
 def calculate_summary(service: pd.DataFrame, forecasts: pd.DataFrame, inventory: pd.DataFrame, activity: pd.DataFrame) -> pd.DataFrame:
     total_ordered = service["units_ordered"].sum()
     total_shipped = service["units_shipped"].sum()
-    stockouts = ((inventory["on_hand_units"] <= 0) & (inventory["average_daily_demand"] > 0)).mean()
+    demanded_inventory = inventory[inventory["average_daily_demand"] > 0]
+    stockouts = safe_divide(
+        (demanded_inventory["on_hand_units"] <= 0).sum(),
+        len(demanded_inventory),
+    )
     warehouse_productivity = safe_divide(activity["units_processed"].sum(), activity["labor_hours"].sum())
     metrics = [
         ("unit_fill_rate", safe_divide(total_shipped, total_ordered)),
