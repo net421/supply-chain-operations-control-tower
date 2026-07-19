@@ -6,7 +6,7 @@ otif_rate,0.60625
 backorder_rate,0.032076851733160404
 average_lead_time_days,4.873333333333333
 weighted_forecast_accuracy,0.8290290229906725
-stockout_location_sku_rate,0.0699074074074074
+stockout_location_sku_rate,0.09499842717835798
 warehouse_productivity_units_per_hour,25.764205286714976
 average_freight_cost_per_kg,0.7655413529383346
 total_cost_to_serve,972618.9099999999

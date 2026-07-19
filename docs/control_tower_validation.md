@@ -12,7 +12,7 @@ flowchart TD
     D --> M["SQL KPI marts"]
     P --> R["Eight-metric reconciliation"]
     M --> R
-    R --> V["37 validation checks"]
+    R --> V["38 validation checks"]
     V --> T["pytest and CI"]
 ```
 
@@ -62,6 +62,13 @@ Weighted forecast accuracy follows an explicit zero-demand rule:
 - actual totals zero but any absolute forecast error exists: `0.0`;
 - otherwise: `max(0, 1 - sum(abs(forecast - actual)) / sum(actual))`.
 
+Stockout rate also has an explicit demand rule: only location-SKU snapshots with
+positive `average_daily_demand` enter the denominator. The current deterministic
+scenario has 302 zero-on-hand stockouts among 3,179 demanded combinations, or
+9.50%. Zero-demand snapshots are excluded from both numerator and denominator.
+The correction is tracked in
+[Issue #6](https://github.com/net421/supply-chain-operations-control-tower/issues/6).
+
 Before the reconciliation CSV is written, rates are normalized to 12 decimal
 places, order counts to whole values and modeled money to two decimals. The
 comparison still uses the documented tolerance, and a regression test writes the
@@ -94,7 +101,7 @@ python run_pipeline.py --with-tests
 Expected outputs include:
 
 - eight `PASS` rows in `outputs/sql_python_reconciliation.csv`;
-- 37 `PASS` rows in `outputs/data_quality_report.csv`;
+- 38 `PASS` rows in `outputs/data_quality_report.csv`;
 - all pytest cases passing;
 - a final `Control tower pipeline completed successfully.` message.
 

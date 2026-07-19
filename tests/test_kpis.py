@@ -107,6 +107,32 @@ def test_fill_rate_and_complete_order_rate_are_not_interchangeable():
     assert summary["unit_fill_rate"] + summary["backorder_rate"] == 1.0
 
 
+def test_stockout_rate_excludes_zero_demand_combinations():
+    service = pd.DataFrame({
+        "units_ordered": [10],
+        "units_shipped": [10],
+        "in_full": [True],
+        "on_time": [True],
+        "otif": [True],
+        "backorder_units": [0],
+        "lead_time_days": [2],
+        "freight_cost_per_kg": [1.0],
+        "cost_to_serve": [10.0],
+    })
+    forecasts = pd.DataFrame({"forecast_units": [10], "actual_units": [10]})
+    inventory = pd.DataFrame({
+        "on_hand_units": [0, 0, 5],
+        "average_daily_demand": [2, 0, 2],
+    })
+    activity = pd.DataFrame({"units_processed": [10], "labor_hours": [1]})
+
+    summary = calculate_summary(
+        service, forecasts, inventory, activity
+    ).set_index("metric")["value"]
+
+    assert summary["stockout_location_sku_rate"] == 0.5
+
+
 def test_zero_shipment_weight_does_not_create_infinite_cost():
     orders = pd.DataFrame({
         "order_id": ["O1"],
