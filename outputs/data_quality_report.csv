@@ -1,10 +1,38 @@
 check,status,detail
+customer_key_unique,PASS,rows=180
+supplier_key_unique,PASS,rows=20
+product_key_unique,PASS,rows=120
 order_line_key_unique,PASS,rows=5928
 shipment_order_unique,PASS,orders=2400
+shipment_orders_exist,PASS,every shipment references an ERP order
+order_shipment_coverage,PASS,every modeled order has exactly one shipment
+order_customers_exist,PASS,every order references a customer
+order_products_exist,PASS,every order line references a product
+order_suppliers_exist,PASS,every order line references a supplier
+inventory_grain_unique,PASS,"grain=snapshot_date,warehouse,sku"
+forecast_grain_unique,PASS,"grain=month,warehouse,sku"
+activity_grain_unique,PASS,"grain=activity_date,warehouse"
 units_non_negative,PASS,ordered and shipped units >= 0
 shipped_not_above_ordered,PASS,line-level shipped <= ordered
+promised_not_before_order,PASS,promised date >= order date
+shipment_promise_matches_erp,PASS,one ERP promise per order and TMS promise matches it
+delivery_not_before_ship,PASS,delivery date >= ship date
+source_on_time_consistent,PASS,source flag matches delivery <= promise
+inventory_non_negative,PASS,inventory measures >= 0
+forecast_non_negative,PASS,forecast and actual units >= 0
+activity_valid,PASS,processed units >= 0 and labor hours > 0
+summary_metric_unique,PASS,metrics=11
+summary_metrics_complete,PASS,required=11
+summary_values_finite,PASS,all reported KPI values are finite
+order_output_unique,PASS,orders=2400
 unit_fill_rate_range,PASS,value=0.9679
-otif_rate_range,PASS,value=0.6233
+complete_order_rate_range,PASS,value=0.8575
+on_time_delivery_rate_range,PASS,value=0.7083
+otif_rate_range,PASS,value=0.6062
+backorder_rate_range,PASS,value=0.0321
+forecast_accuracy_range,PASS,value=0.8290
+stockout_rate_range,PASS,value=0.0699
 otif_not_above_components,PASS,OTIF <= in-full and on-time
-backorder_complements_fill,PASS,fill + backorder = 1
+backorder_complements_fill,PASS,fill + backorder = 1 under the documented model
 carrier_output_non_empty,PASS,carriers=4
+sql_python_reconciliation_passed,PASS,metrics=8
